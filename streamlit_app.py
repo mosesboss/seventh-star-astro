@@ -98,8 +98,8 @@ if st.session_state.get("chart_generated", False):
                 st.write(error_msg)
         else:
             try:
-                # استخدام النموذج المعتمد والمحدث gemini-2.5-flash
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                # استخدام النموذج المحدث gemini-3.8-flash بناءً على طلب الخادم
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
                 
                 context = f"قواعد ونصوص النجم السابع الفلكية:\n{json.dumps(lilly_data, ensure_ascii=False)}"
                 full_prompt = f"أنت مساعد فلكي خبير ومتخصص في نظام 'النجم السابع' للتنجيم التقليدي.\nالسياق:\n{context}\n\nسؤال الزائر: {user_query}"
