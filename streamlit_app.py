@@ -2,19 +2,9 @@ import streamlit as st
 import json
 import urllib.request
 
-# ----------------------------------------------------
-# 0. إعدادات الصفحة والتنسيق لشاشات الموبايل
-# ----------------------------------------------------
-st.set_page_config(
-    page_title="حاسبة النجم السابع الفلكية",
-    page_icon="🌟",
-    layout="centered"
-)
+st.set_page_config(page_title="حاسبة النجم السابع الفلكية", page_icon="🌟", layout="centered")
 
-# ----------------------------------------------------
-# 1. نظام الحماية ورمز الدخول (Passcode)
-# ----------------------------------------------------
-SECRET_PASSCODE = "1234"  # يمكنك تغيير رمز الدخول هنا
+SECRET_PASSCODE = "1234"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -22,7 +12,6 @@ if "authenticated" not in st.session_state:
 if not st.session_state.authenticated:
     st.title("🔒 دخول الأعضاء")
     st.subheader("يرجى إدخال رمز الدخول لفتح حاسبة النجم السابع الفلكية")
-    
     passcode_input = st.text_input("رمز الدخول:", type="password")
     if st.button("تسجيل الدخول"):
         if passcode_input == SECRET_PASSCODE:
@@ -32,23 +21,16 @@ if not st.session_state.authenticated:
             st.error("رمز الدخول غير صحيح!")
     st.stop()
 
-# ----------------------------------------------------
-# 2. تحميل ملف قواعد وتفسيرات النجم السابع
-# ----------------------------------------------------
 @st.cache_data
 def load_lilly_data():
     try:
         with open("lilly_data.json", "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        st.error(f"خطأ في تحميل ملف lilly_data.json: {e}")
         return None
 
 lilly_data = load_lilly_data()
 
-# ----------------------------------------------------
-# 3. الواجهة الرئيسية واستخراج البيانات
-# ----------------------------------------------------
 st.title("🌟 حاسبة الخارطة التقليدية (النجم السابع)")
 st.write("أدخل بيانات الميلاد لاستخراج القواعد والتفسيرات الفلكية.")
 
@@ -67,68 +49,47 @@ if st.session_state.get("chart_generated", False):
     st.markdown("---")
     st.header("📊 نتائج القواعد والتفسيرات")
 
-    if lilly_data and "planets_in_houses" in lilly_data:
+    if lilly_data and "planet_in_houses" in lilly_data:
         st.subheader("✨ زحل (Saturn)")
-        st.info(lilly_data["planets_in_houses"].get("Saturn", {}).get("1", "لا يوجد نص متاح لهذا البيت."))
+        st.info(lilly_data["planet_in_houses"].get("Saturn", {}).get("1", "لا يوجد نص متاح."))
         
         st.subheader("✨ المشتري (Jupiter)")
-        st.success(lilly_data["planets_in_houses"].get("Jupiter", {}).get("1", "لا يوجد نص متاح لهذا البيت."))
+        st.success(lilly_data["planet_in_houses"].get("Jupiter", {}).get("1", "لا يوجد نص متاح."))
     else:
-        st.warning("يرجى التأكد من ملء وتنسيق ملف lilly_data.json بشكل صحيح.")
+        st.warning("يرجى التحقق من محتوى ملف lilly_data.json في المستودع.")
 
     st.markdown("---")
     st.subheader("💬 مساعد النجم السابع الذكي (Gemini)")
-
-    # 🔐 قراءة مفتاح الـ API بآمان من Secrets أو من بيئة التشغيل المحلي
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
-    if not GEMINI_API_KEY:
-        st.warning("⚠️ لم يتم ضبط مفتاح GEMINI_API_KEY داخل إعدادات الأسرار (Secrets). يرجى إضافته في لوحة تحكم Streamlit.")
-
-    # تهيئة سجل المحادثة
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # عرض الرسائل السابقة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # استقبال سؤال المستخدم
-    user_query = st.chat_input("اسأل مساعد النجم السابع عن أي تفصيل في خريطتك...")
+    user_query = st.chat_input("اسأل مساعد النجم السابع عن تفاصيل خريطتك...")
     if user_query:
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"):
             st.write(user_query)
 
-        if not GEMINI_API_KEY:
-            st.error("تعذر الاتصال بالمساعد لعدم وجود مفتاح API.")
-        else:
-            # تجهيز سياق المساعد والملف
-            context = f"قواعد ونصوص النجم السابع المتاحة في الملف: {json.dumps(lilly_data, ensure_ascii=False)}"
+        if GEMINI_API_KEY:
+            context = f"قواعد النجم السابع: {json.dumps(lilly_data, ensure_ascii=False)}"
             prompt_data = {
                 "contents": [{
-                    "parts": [{
-                        "text": f"أنت مساعد فلكي متخصص في برنامج 'النجم السابع' للتحليل الفلكي والتنجيم التقليدي.\nالسياق المتاح:\n{context}\n\nسؤال الزائر: {user_query}"
-                    }]
+                    "parts": [{"text": f"أنت مساعد فلكي لنظام النجم السابع.\nالسياق:\n{context}\n\nسؤال المستخدم: {user_query}"}]
                 }]
             }
-
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(prompt_data).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-
+            req = urllib.request.Request(url, data=json.dumps(prompt_data).encode("utf-8"), headers={"Content-Type": "application/json"})
             try:
-                with st.spinner("جاري التفكير والإجابة من مساعد النجم السابع..."):
-                    with urllib.request.urlopen(req) as response:
-                        res_data = json.loads(response.read().decode("utf-8"))
-                        answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
-
+                with urllib.request.urlopen(req) as response:
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 with st.chat_message("assistant"):
                     st.write(answer)
             except Exception as e:
-                st.error(f"حدث خطأ أثناء التواصل مع مساعد النجم السابع: {e}")
+                st.error(f"خطأ في الاتصال: {e}")
