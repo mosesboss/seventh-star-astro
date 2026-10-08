@@ -1,101 +1,134 @@
 import streamlit as st
-import pandas as pd
-import altair as alt
+import json
+import urllib.request
 
 # ----------------------------------------------------
-# 1. إعداد الصفحة والعنوان
+# 0. إعدادات الصفحة والتنسيق لشاشات الموبايل
 # ----------------------------------------------------
-st.set_page_config(page_title="GDP Dashboard", page_icon="🌎", layout="wide")
-
-st.title("🌎 GDP dashboard")
-st.markdown("""
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. 
-As you'll notice, the data only goes to 2022 right now, and datapoints for certain years are often missing. 
-But it's otherwise a great (and did I mention free?) source of data.
-""")
+st.set_page_config(
+    page_title="حاسبة النجم السابع الفلكية",
+    page_icon="🌟",
+    layout="centered"
+)
 
 # ----------------------------------------------------
-# 2. تحميل البيانات (بيانات افتراضية للتجربة)
+# 1. نظام الحماية ورمز الدخول (Passcode)
 # ----------------------------------------------------
-@st.cache_data
-def get_gdp_data():
-    # روابط أو بيانات البنك الدولي
-    url = "https://raw.githubusercontent.com/datasets/gdp/master/data/gdp.csv"
-    df = pd.read_csv(url)
-    df.rename(columns={"Country Code": "Country Code", "Year": "Year", "Value": "GDP"}, inplace=True)
-    return df
+SECRET_PASSCODE = "1234"  # يمكنك تغيير رمز الدخول هنا
 
-try:
-    df_gdp = get_gdp_data()
-except Exception:
-    st.error("تعذر تحميل البيانات المباشرة، يرجى التأكد من الاتصال بالإنترنت.")
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔒 دخول الأعضاء")
+    st.subheader("يرجى إدخال رمز الدخول لفتح حاسبة النجم السابع الفلكية")
+    
+    passcode_input = st.text_input("رمز الدخول:", type="password")
+    if st.button("تسجيل الدخول"):
+        if passcode_input == SECRET_PASSCODE:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("رمز الدخول غير صحيح!")
     st.stop()
 
 # ----------------------------------------------------
-# 3. عناصر التحكم بالمدخلات (السنوات والدول)
+# 2. تحميل ملف قواعد وتفسيرات النجم السابع
 # ----------------------------------------------------
-min_year = int(df_gdp['Year'].min())
-max_year = int(df_gdp['Year'].max())
+@st.cache_data
+def load_lilly_data():
+    try:
+        with open("lilly_data.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        st.error(f"خطأ في تحميل ملف lilly_data.json: {e}")
+        return None
 
-st.subheader("Which years are you interested in?")
-from_year, to_year = st.slider(
-    "Select Year Range",
-    min_value=min_year,
-    max_value=max_year,
-    value=(1960, 2022),
-    label_visibility="collapsed"
-)
-
-all_countries = sorted(df_gdp['Country Code'].unique())
-default_countries = ["DEU", "FRA", "GBR", "BRA", "MEX", "JPN"]
-
-st.subheader("Which countries would you like to view?")
-selected_countries = st.multiselect(
-    "Select Countries",
-    options=all_countries,
-    default=[c for c in default_countries if c in all_countries],
-    label_visibility="collapsed"
-)
-
-# تصفية البيانات بناءً على مدخلات المستخدم
-filtered_df = df_gdp[
-    (df_gdp['Country Code'].isin(selected_countries)) &
-    (df_gdp['Year'] >= from_year) &
-    (df_gdp['Year'] <= to_year)
-]
+lilly_data = load_lilly_data()
 
 # ----------------------------------------------------
-# 4. رسم البياني للتغير عبر الزمن (GDP over time)
+# 3. الواجهة الرئيسية واستخراج البيانات
 # ----------------------------------------------------
-st.markdown("---")
-st.subheader("GDP over time")
+st.title("🌟 حاسبة الخارطة التقليدية (النجم السابع)")
+st.write("أدخل بيانات الميلاد لاستخراج القواعد والتفسيرات الفلكية.")
 
-if not filtered_df.empty:
-    chart = alt.Chart(filtered_df).mark_line().encode(
-        x=alt.X('Year:O', title='Year'),
-        y=alt.Y('GDP:Q', title='GDP ($)'),
-        color='Country Code:N',
-        tooltip=['Country Code', 'Year', 'GDP']
-    ).properties(height=400)
-    
-    st.altair_chart(chart, use_container_width=True)
+col1, col2 = st.columns(2)
+with col1:
+    birth_date = st.date_input("تاريخ الميلاد")
+    lat = st.number_input("خط العرض (Latitude)", value=33.5138, format="%.4f")
+with col2:
+    birth_time = st.time_input("وقت الميلاد")
+    lon = st.number_input("خط الطول (Longitude)", value=36.2765, format="%.4f")
 
-# ----------------------------------------------------
-# 5. عرض مؤشرات الأداء (Metrics) لعام 2022
-# ----------------------------------------------------
-st.markdown("---")
-st.subheader(f"GDP in {to_year}")
+if st.button("🚀 استخراج الخارطة وتحليلها"):
+    st.session_state.chart_generated = True
 
-df_latest = filtered_df[filtered_df['Year'] == to_year]
+if st.session_state.get("chart_generated", False):
+    st.markdown("---")
+    st.header("📊 نتائج القواعد والتفسيرات")
 
-if not df_latest.empty:
-    cols = st.columns(3)
-    for idx, row in enumerate(df_latest.iterrows()):
-        country = row[1]['Country Code']
-        gdp_val = row[1]['GDP']
-        gdp_in_billions = f"{gdp_val / 1e9:,.0f}B"
+    if lilly_data and "planets_in_houses" in lilly_data:
+        st.subheader("✨ زحل (Saturn)")
+        st.info(lilly_data["planets_in_houses"].get("Saturn", {}).get("1", "لا يوجد نص متاح لهذا البيت."))
         
-        with cols[idx % 3]:
-            st.metric(label=f"{country} GDP", value=gdp_in_billions)
-else:
-    st.info(f"لا توجد بيانات متوفرة لعام {to_year} للدول المحددة.")
+        st.subheader("✨ المشتري (Jupiter)")
+        st.success(lilly_data["planets_in_houses"].get("Jupiter", {}).get("1", "لا يوجد نص متاح لهذا البيت."))
+    else:
+        st.warning("يرجى التأكد من ملء وتنسيق ملف lilly_data.json بشكل صحيح.")
+
+    st.markdown("---")
+    st.subheader("💬 مساعد النجم السابع الذكي (Gemini)")
+
+    # 🔐 قراءة مفتاح الـ API بآمان من Secrets أو من بيئة التشغيل المحلي
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+
+    if not GEMINI_API_KEY:
+        st.warning("⚠️ لم يتم ضبط مفتاح GEMINI_API_KEY داخل إعدادات الأسرار (Secrets). يرجى إضافته في لوحة تحكم Streamlit.")
+
+    # تهيئة سجل المحادثة
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # عرض الرسائل السابقة
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    # استقبال سؤال المستخدم
+    user_query = st.chat_input("اسأل مساعد النجم السابع عن أي تفصيل في خريطتك...")
+    if user_query:
+        st.session_state.messages.append({"role": "user", "content": user_query})
+        with st.chat_message("user"):
+            st.write(user_query)
+
+        if not GEMINI_API_KEY:
+            st.error("تعذر الاتصال بالمساعد لعدم وجود مفتاح API.")
+        else:
+            # تجهيز سياق المساعد والملف
+            context = f"قواعد ونصوص النجم السابع المتاحة في الملف: {json.dumps(lilly_data, ensure_ascii=False)}"
+            prompt_data = {
+                "contents": [{
+                    "parts": [{
+                        "text": f"أنت مساعد فلكي متخصص في برنامج 'النجم السابع' للتحليل الفلكي والتنجيم التقليدي.\nالسياق المتاح:\n{context}\n\nسؤال الزائر: {user_query}"
+                    }]
+                }]
+            }
+
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(prompt_data).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+
+            try:
+                with st.spinner("جاري التفكير والإجابة من مساعد النجم السابع..."):
+                    with urllib.request.urlopen(req) as response:
+                        res_data = json.loads(response.read().decode("utf-8"))
+                        answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
+
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+                with st.chat_message("assistant"):
+                    st.write(answer)
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء التواصل مع مساعد النجم السابع: {e}")
