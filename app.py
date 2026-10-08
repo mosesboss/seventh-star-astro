@@ -1,3 +1,4 @@
+
 import streamlit as st
 import json
 import urllib.request
@@ -14,7 +15,7 @@ st.set_page_config(
 # ----------------------------------------------------
 # 1. نظام الحماية ورمز الدخول (Passcode)
 # ----------------------------------------------------
-SECRET_PASSCODE = "1234"  # يمكنك تغيير كلمة السر هنا
+SECRET_PASSCODE = "1234"  # يمكنك تغيير رمز الدخول هنا
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -79,49 +80,59 @@ if st.session_state.get("chart_generated", False):
     st.markdown("---")
     st.subheader("💬 مساعد النجم السابع الذكي (Gemini)")
 
-    # 🔑 مفتاح API الخاص بك:
-    GEMINI_API_KEY = "AQ.Ab8RN6LP_zMbZNpaH709rDM2s5wF8KzZGpX-qzSwszI_9iEcUA"
+    # 🔐 قراءة مفتاح الـ API بآمان من Secrets أو من بيئة التشغيل المحلي
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
-    # تهيئة سجل المحادثة في الجلسة
+    if not GEMINI_API_KEY:
+        st.warning("⚠️ لم يتم ضبط مفتاح GEMINI_API_KEY داخل إعدادات الأسرار (Secrets). يرجى إضافته في لوحة تحكم Streamlit.")
+
+    # تهيئة سجل المحادثة
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # عرض سجل الرسائل السابقة
+    # عرض الرسائل السابقة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # استقبال سؤال الزائر من مربع الدردشة
+    # استقبال سؤال المستخدم
     user_query = st.chat_input("اسأل مساعد النجم السابع عن أي تفصيل في خريطتك...")
     if user_query:
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"):
             st.write(user_query)
 
-        # تجهيز سياق أمر النظام الموجه للذكاء الاصطناعي
-        context = f"قواعد ونصوص النجم السابع المتاحة في الملف: {json.dumps(lilly_data, ensure_ascii=False)}"
-        prompt_data = {
-            "contents": [{
-                "parts": [{
-                    "text": f"أنت مساعد فلكي متخصص في برنامج 'النجم السابع' للتحليل الفلكي والتنجيم التقليدي.\nالسياق المتاح:\n{context}\n\nسؤال الزائر: {user_query}"
+        if not GEMINI_API_KEY:
+            st.error("تعذر الاتصال بالمساعد لعدم وجود مفتاح API.")
+        else:
+            # تجهيز سياق المساعد والملف
+            context = f"قواعد ونصوص النجم السابع المتاحة في الملف: {json.dumps(lilly_data, ensure_ascii=False)}"
+            prompt_data = {
+                "contents": [{
+                    "parts": [{
+                        "text": f"أنت مساعد فلكي متخصص في برنامج 'النجم السابع' للتحليل الفلكي والتنجيم التقليدي.\nالسياق المتاح:\n{context}\n\nسؤال الزائر: {user_query}"
+                    }]
                 }]
-            }]
-        }
+            }
 
-        # إرسال الطلب مباشرة لـ Gemini REST API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(prompt_data).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(prompt_data).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
 
-        try:
-            with st.spinner("جاري التفكير والإجابة من مساعد النجم السابع..."):
-                with urllib.request.urlopen(req) as response:
-                    res_data = json.loads(response.read().decode("utf-8"))
-                    answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            try:
+                with st.spinner("جاري التفكير والإجابة من مساعد النجم السابع..."):
+                    with urllib.request.urlopen(req) as response:
+                        res_data = json.loads(response.read().decode("utf-8"))
+                        answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
 
+                st.session_state.messages.append({"role": "assistant", "content": answer})
+                with st.chat_message("assistant"):
+                    st.write(answer)
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء التواصل مع مساعد النجم السابع: {e}")
             st.session_state.messages.append({"role": "assistant", "content": answer})
             with st.chat_message("assistant"):
                 st.write(answer)
