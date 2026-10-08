@@ -1,0 +1,81 @@
+{
+  "horary_considerations_before_judgment": {
+    "description": "شروط وأحكام أصالة الهيئة وصحتها قبل الشروع في إعطاء الحكم النهائي في المسائل",
+    "conditions": [
+      {
+        "id": "radicality",
+        "name": "أصالة المسألة (Radicality)",
+        "rule": "تعتبر الهيئة أصيلة إذا كان حاكم ساعة السؤال وحاكم الطالع من نفس الطبيعة أو يتفقان في المودة أو التثليث أو التوافق المائي أو الهوائي."
+      },
+      {
+        "id": "early_or_late_degrees",
+        "name": "درجات الطالع المبكرة أو المتأخرة",
+        "rule": "إذا وقع حاكم الطالع أو القمر في الدرجات الأولى أو الأخيرة من البرج، فلا يُنصح بإعطاء حكم قاطع لأن الوقت قد يكون مبكراً جداً أو متأخراً."
+      },
+      {
+        "id": "moon_void_of_course",
+        "name": "الفراغ من السير (Void of Course)",
+        "rule": "إذا كان القمر في حالة فراغ من السير، فإن الأمور غالباً لا تقدم ولا تتقدم نحو النجاح إلا نادراً."
+      },
+      {
+        "id": "via_combusta",
+        "name": "طريق الاحتراق (Via Combusta)",
+        "rule": "الحذر من إعطاء حكم قاطع إذا كان القمر يقع في طريق الاحتراق الممتدة من الميزان وحتى منتصف العقرب."
+      },
+      {
+        "id": "house_8_and_retrograde",
+        "name": "سوء حال حاكم الطالع",
+        "rule": "إذا كان حاكم الطالع في البيت الثامن أو متراجعاً مصاباً بالنحوسات الشديدة، تعاني المسألة من عراقيل قاسية."
+      }
+    ]
+  },
+  "essential_and_accidental_dignities": {
+    "description": "جدول الكرامات والضعوف الجوهرية والعرضية والخصائص",
+    "essential_fortitudes": {
+      "ruler_in_own_sign": 5,
+      "exaltation": 4,
+      "triplicity": 3,
+      "term": 2,
+      "face": 1
+    },
+    "essential_debilities": {
+      "detriment": -5,
+      "fall": -4,
+      "peregrine": -4
+    },
+    "accidental_fortitudes": {
+      "angle_mc_asc": 5,
+      "house_2_4_11": 4,
+      "house_3_5_9": 3,
+      "house_6_12": 2,
+      "in_joy": 5,
+      "direct_motion": 4,
+      "fast_in_motion": 2,
+      "free_from_combustion": 2,
+      "cazimi": 5,
+      "conjunct_benefics": 5,
+      "trine_sextile_benefics": 4
+    },
+    "accidental_debilities": {
+      "house_8_6": -5,
+      "house_12": -5,
+      "retrograde": -5,
+      "slow_in_motion": -2,
+      "combust": -5,
+      "under_sun_beams": -4,
+      "square_opposition_malefics": -5,
+      "conjunct_malefics": -4,
+      "algol_conjunct": -5
+    }
+  },
+  "degree_qualities_and_phenomena": {
+    "description": "خصائص الدرجات الفلكية من نور، ظلمة، دخانية، ومعيبة (Azimene)",
+    "categories": {
+      "masculine_feminine": "تستخدم لتحديد الجنس (ذكر/أنثى) بناءً على وقوع الدليل أو القمر في النصف المذكر أو المؤنث من البرج.",
+      "light_degrees": "تدل على صفاء الملامح، جمال الوجه، ووضوح المسألة.",
+      "dark_degrees": "تدل على العتمة، الحيرة، وعدم معرفة المخرج.",
+      "smoky_void_degrees": "تدل على التوسط أو الاعتلال.",
+      "azimene_degrees": "درجات معيبة تدل على عاهة مستدامة، ضعف بصري، أو نقص بنيوي إذا صادفت الطالع أو الدلالات."
+    }
+  }
+}
