@@ -98,7 +98,8 @@ if st.session_state.get("chart_generated", False):
                 st.write(error_msg)
         else:
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                # استخدام النموذج المعتمد والمحدث gemini-2.5-flash
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
                 
                 context = f"قواعد ونصوص النجم السابع الفلكية:\n{json.dumps(lilly_data, ensure_ascii=False)}"
                 full_prompt = f"أنت مساعد فلكي خبير ومتخصص في نظام 'النجم السابع' للتنجيم التقليدي.\nالسياق:\n{context}\n\nسؤال الزائر: {user_query}"
@@ -116,7 +117,8 @@ if st.session_state.get("chart_generated", False):
                     if response.status_code == 200:
                         answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
                     else:
-                        answer = f"خطأ من الخادم: {res_json.get('error', {}).get('message', 'غير معروف')}"
+                        error_details = res_json.get('error', {}).get('message', 'خطأ غير معروف')
+                        answer = f"خطأ من الخادم: {error_details}"
 
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 with st.chat_message("assistant"):
