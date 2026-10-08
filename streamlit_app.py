@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from google import genai
+import requests
 
 # ----------------------------------------------------
 # 0. إعدادات الصفحة والتنسيق
@@ -73,22 +73,18 @@ if st.session_state.get("chart_generated", False):
     st.markdown("---")
     st.subheader("💬 مساعد النجم السابع الذكي (Gemini)")
 
-    # قراءة مفتاح الـ API من Secrets
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
     if not GEMINI_API_KEY:
         st.warning("⚠️ تنبيه: لم يتم ضبط مفتاح `GEMINI_API_KEY` في إعدادات الأسرار (Secrets) على المنصة.")
 
-    # تهيئة سجل المحادثة
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # عرض الرسائل السابقة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # استقبال سؤال المستخدم
     user_query = st.chat_input("اسأل مساعد النجم السابع عن تفاصيل خريطتك...")
     if user_query:
         st.session_state.messages.append({"role": "user", "content": user_query})
@@ -102,18 +98,25 @@ if st.session_state.get("chart_generated", False):
                 st.write(error_msg)
         else:
             try:
-                # استخدام العميل الرسمي والمحدث لجوجل جيميناي
-                client = genai.Client(api_key=GEMINI_API_KEY)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
                 
                 context = f"قواعد ونصوص النجم السابع الفلكية:\n{json.dumps(lilly_data, ensure_ascii=False)}"
                 full_prompt = f"أنت مساعد فلكي خبير ومتخصص في نظام 'النجم السابع' للتنجيم التقليدي.\nالسياق:\n{context}\n\nسؤال الزائر: {user_query}"
 
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": full_prompt}]
+                    }]
+                }
+
                 with st.spinner("جاري التفكير وتحليل الخارطة..."):
-                    response = client.models.generate_content(
-                        model='gemini-2.5-flash',
-                        contents=full_prompt,
-                    )
-                    answer = response.text
+                    response = requests.post(url, json=payload)
+                    res_json = response.json()
+                    
+                    if response.status_code == 200:
+                        answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                    else:
+                        answer = f"خطأ من الخادم: {res_json.get('error', {}).get('message', 'غير معروف')}"
 
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 with st.chat_message("assistant"):
