@@ -1,11 +1,17 @@
 import streamlit as st
 import json
-import urllib.request
+from google import genai
 
+# ----------------------------------------------------
+# 0. إعدادات الصفحة والتنسيق
+# ----------------------------------------------------
 st.set_page_config(page_title="حاسبة النجم السابع الفلكية", page_icon="🌟", layout="centered")
 
 SECRET_PASSCODE = "1234"
 
+# ----------------------------------------------------
+# 1. نظام الحماية ورمز الدخول (Passcode)
+# ----------------------------------------------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -21,6 +27,9 @@ if not st.session_state.authenticated:
             st.error("رمز الدخول غير صحيح!")
     st.stop()
 
+# ----------------------------------------------------
+# 2. تحميل ملف قواعد وتفسيرات النجم السابع
+# ----------------------------------------------------
 @st.cache_data
 def load_lilly_data():
     try:
@@ -31,6 +40,9 @@ def load_lilly_data():
 
 lilly_data = load_lilly_data()
 
+# ----------------------------------------------------
+# 3. الواجهة الرئيسية واستخراج البيانات
+# ----------------------------------------------------
 st.title("🌟 حاسبة الخارطة التقليدية (النجم السابع)")
 st.write("أدخل بيانات الميلاد لاستخراج القواعد والتفسيرات الفلكية.")
 
@@ -60,36 +72,55 @@ if st.session_state.get("chart_generated", False):
 
     st.markdown("---")
     st.subheader("💬 مساعد النجم السابع الذكي (Gemini)")
+
+    # قراءة مفتاح الـ API من Secrets
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
+    if not GEMINI_API_KEY:
+        st.warning("⚠️ تنبيه: لم يتم ضبط مفتاح `GEMINI_API_KEY` في إعدادات الأسرار (Secrets) على المنصة.")
+
+    # تهيئة سجل المحادثة
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # عرض الرسائل السابقة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
+    # استقبال سؤال المستخدم
     user_query = st.chat_input("اسأل مساعد النجم السابع عن تفاصيل خريطتك...")
     if user_query:
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"):
             st.write(user_query)
 
-        if GEMINI_API_KEY:
-            context = f"قواعد النجم السابع: {json.dumps(lilly_data, ensure_ascii=False)}"
-            prompt_data = {
-                "contents": [{
-                    "parts": [{"text": f"أنت مساعد فلكي لنظام النجم السابع.\nالسياق:\n{context}\n\nسؤال المستخدم: {user_query}"}]
-                }]
-            }
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-            req = urllib.request.Request(url, data=json.dumps(prompt_data).encode("utf-8"), headers={"Content-Type": "application/json"})
+        if not GEMINI_API_KEY:
+            error_msg = "عذراً، مفتاح الـ API غير متوفر. يرجى إضافته في إعدادات التطبيق (Secrets)."
+            st.session_state.messages.append({"role": "assistant", "content": error_msg})
+            with st.chat_message("assistant"):
+                st.write(error_msg)
+        else:
             try:
-                with urllib.request.urlopen(req) as response:
-                    res_data = json.loads(response.read().decode("utf-8"))
-                    answer = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                # استخدام العميل الرسمي والمحدث لجوجل جيميناي
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                
+                context = f"قواعد ونصوص النجم السابع الفلكية:\n{json.dumps(lilly_data, ensure_ascii=False)}"
+                full_prompt = f"أنت مساعد فلكي خبير ومتخصص في نظام 'النجم السابع' للتنجيم التقليدي.\nالسياق:\n{context}\n\nسؤال الزائر: {user_query}"
+
+                with st.spinner("جاري التفكير وتحليل الخارطة..."):
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=full_prompt,
+                    )
+                    answer = response.text
+
                 st.session_state.messages.append({"role": "assistant", "content": answer})
                 with st.chat_message("assistant"):
                     st.write(answer)
+                    
             except Exception as e:
-                st.error(f"خطأ في الاتصال: {e}")
+                error_msg = f"حدث خطأ أثناء الاتصال بالمساعد: {e}"
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                with st.chat_message("assistant"):
+                    st.error(error_msg)
